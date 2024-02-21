@@ -25,13 +25,13 @@ ints_to_labels = {}
 (tr_data, tr_labels) = read_uci_file(training_file, labels_to_ints, ints_to_labels)
 (test_data, test_labels) = read_uci_file(test_file, labels_to_ints, ints_to_labels)
 
-print(tr_data.shape)
+# print(tr_data.shape)
 # print(tr_labels.shape)
 # print(test_data.shape)
 # print(test_labels.shape)
 
 # This is where your code is called.
-# perceptron_train_and_test(tr_data, tr_labels, test_data, test_labels, 
-#                           training_rounds)
+perceptron_train_and_test(tr_data, tr_labels, test_data, test_labels, 
+                          training_rounds)
 
 
