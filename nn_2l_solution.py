@@ -8,24 +8,26 @@ def nn_2l_train_and_test(tr_data, tr_labels, test_data, test_labels, labels_to_i
     tr_data = tr_data / max_abs_value
     test_data = test_data / max_abs_value
 
-    # Initialize weights and bias
+    # extract the number of features and classes
     num_features = tr_data.shape[1]
-    # print(f"Number of features: {num_features}")
     num_classes = len(labels_to_ints)
+
+    # Initialize weights and bias per perceptron
     weights = np.random.uniform(-0.05, 0.05, (num_classes, num_features))
-    # print(f"Weights: {weights}")
     bias = np.random.uniform(-0.05, 0.05, num_classes)
 
+
+    # create one shot vector and fill it with the correct class
     one_shot_labels = np.zeros((len(tr_labels), num_classes))
 
     for i in range(len(tr_labels)):
         one_shot_labels[i, tr_labels[i, 0]] = 1
 
-    # print(one_shot_labels)
+    # print(one_shot_labels[0])
+    zx = np.zeros(num_classes)
 
     N = len(tr_data)
 
-    # Training process
     learning_rate = 1
     for round in range(training_rounds):
         for i in range(N):
@@ -33,31 +35,43 @@ def nn_2l_train_and_test(tr_data, tr_labels, test_data, test_labels, labels_to_i
             object_id = i
             # 
             # z(x) = w^T*x + b = 1 / (1 + e^(-w^T*x - b))
-            prediction = 1 / ( 1 + np.exp(-np.dot(tr_data[i], weights.T) - bias))
-            # print(f"our predictions are: {prediction} and target is {one_shot_labels[i]}")
+            # Retrieving the prediction for each perceptron
+            for j in range(num_classes):
+                zx[j] = 1 / ( 1 + np.exp(-np.dot(tr_data[i], weights[j]) - bias[j]))
+            # print(zx)
             #
             # labels to train with
-            true_class = tr_labels[i, 0]
+            true_class = one_shot_labels[i]
             #
-            # error = true_class - prediction
-            error = one_shot_labels[i] - prediction
-            # print(f"Error: {error} and length is {len(error)}")
-            accuracy = [1 if abs(error[j]) < 0.5 else 0 for j in range(len(error))]
-            # print(f"one_shot_labels[i]: {one_shot_labels[i]}")
-            # 
-            for _ in range(num_classes):
-                weights[_] -= learning_rate * (prediction[_]-one_shot_labels[i, _])*(1-prediction[_])* tr_data[i]
-                bias -= learning_rate * (prediction[_]-one_shot_labels[i, _])*(1 - prediction[_])*prediction[_]
-            # weights -= learning_rate * (prediction-one_shot_labels[i])
+            #
+            # decide what classes are predicted by the network, highest value for the class is the prediction
+            if np.argmax(zx) == tr_labels[i, 0]:
+                # set accuracy to 1 if the prediction is correct
+                accuracy = 1
+                # if tie, divide the accuracy by the number of classes that are tied
+                if len(np.where(zx == np.max(zx))[0]) > 1:
+                    accuracy /= len(np.where(zx == np.max(zx))[0])
+            else:
+                accuracy = 0
+            #
             # w = w - n * (z(xn) - tn) * (1 - z(xn)) * z(xn) * xn
-            print('ID=%5d, predicted=%10s, true=%10s, accuracy=%4s\n' % (object_id, str(prediction), str(true_class), str(accuracy)))
-
-        learning_rate *= 0.98  # Update learning rate for the next round
+            #
+            # b = b - n * (z(xn) - tn) * (1 - z(xn)) * z(xn)
+            for j in range(num_classes):
+                weights[j] -= learning_rate * (zx[j] - true_class[j]) * (1 - zx[j]) * zx[j] * tr_data[i]
+                bias[j] -= learning_rate * (zx[j] - true_class[j]) * (1 - zx[j]) * zx[j]
+            print('ID=%5d, predicted=%10s, true=%10s, accuracy=%4.2f\n' % (object_id, str(np.argmax(zx)), str(tr_labels[i, 0]), accuracy))
+        learning_rate *= 0.98
 
     # for every test value, we use our weights and bias to predict the class
-    test_predictions = np.argmax(1 / ( 1 + np.exp(-np.dot(test_data, weights.T) - bias)), axis=1)
+    test_predictions = [np.argmax([np.dot(test_data[i], weights[j]) + bias[j] for j in range(num_classes)]) for i in range(len(test_data))]
     # we test by supervised learning if the prediction is correct
     accuracy = np.mean(test_labels.flatten() == test_predictions)
     print(f"Classification Accuracy: {accuracy}")
+
+
+
+
+    
 
 
